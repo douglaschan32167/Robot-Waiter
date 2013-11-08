@@ -1,0 +1,4 @@
+INDEX VERSION 1.126+C:\Users\dougl_000\Documents\College Work\EE 149\robot waiter\voiceRecognition\.metadata\.plugins\org.eclipse.jdt.core
+3753540616.index
+3473439462.index
+2988066019.index

@@ -1,0 +1,3 @@
+-Be able to take a voice order and convert it into a text file, parsing it and putting it into a set form.
+-Apply sanity checks to make sure that the order is coherent and is something that can be fulfilled.
+-Send it remotely to the laptop.
