@@ -15,7 +15,6 @@ import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,11 +25,10 @@ public class MainActivity extends Activity {
  
     private Button killButton;
     private Button sendOrderButton;
-    private EditText ipText;
     private ImageButton btnSpeak;
     private TextView txtText;
     private String currentOrder = "";
-    private String targetIp; 
+    private String targetIp = "192.168.1.187"; //TODO: Make this enterable
     private int targetPort = 4321;
     
     OnClickListener forceQuitListener = new OnClickListener() {
@@ -59,7 +57,6 @@ public class MainActivity extends Activity {
     
     public void sendOrder() {
 		try {
-			targetIp = ipText.getText().toString();
 			Socket socket = new Socket(targetIp, targetPort);
 			OutputStream outputStream = socket.getOutputStream();
 			outputStream.write(currentOrder.getBytes());
@@ -83,7 +80,6 @@ public class MainActivity extends Activity {
         txtText = (TextView) findViewById(R.id.txtText);
  
         btnSpeak = (ImageButton) findViewById(R.id.btnSpeak);
-        ipText = (EditText) findViewById(R.id.ipText);
         killButton = (Button) findViewById(R.id.killButton);
         killButton.setOnClickListener(forceQuitListener);
         sendOrderButton = (Button) findViewById(R.id.sendOrderButton);

@@ -30,7 +30,7 @@ public class MainActivity extends Activity {
     private ImageButton btnSpeak;
     private TextView txtText;
     private String currentOrder = "";
-    private String targetIp; 
+    private String targetIp = "192.168.1.187"; //TODO: Make this enterable
     private int targetPort = 4321;
     
     OnClickListener forceQuitListener = new OnClickListener() {

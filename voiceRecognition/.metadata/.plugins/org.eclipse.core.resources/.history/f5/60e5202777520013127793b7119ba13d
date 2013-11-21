@@ -7,6 +7,5 @@
     <string name="speaktext">speak</string>
     <string name="killButton">quit</string>
     <string name="sendOrder">send order</string>
-    <string name="putIpHere">Type ip here (x.x.x.x)</string>
 
 </resources>

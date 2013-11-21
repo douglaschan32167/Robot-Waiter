@@ -36,7 +36,7 @@
         android:inputType="textShortMessage|textAutoCorrect|textCapSentences|textMultiLine"
         android:maxLength="30"
         android:maxLines="1"
-        android:text="@string/putIpHere"
+        android:text="put IP address of target here"
         />
         
 

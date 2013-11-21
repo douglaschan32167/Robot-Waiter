@@ -25,20 +25,6 @@
         android:layout_marginRight="10dp"
         android:layout_marginTop="10dp"
         android:textAppearance="?android:attr/textAppearanceLarge" />
-    
-    <EditText
-        android:id="@+id/ipText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="10dp"
-        android:layout_marginRight="10dp"
-        android:layout_marginTop="10dp"
-        android:inputType="textShortMessage|textAutoCorrect|textCapSentences|textMultiLine"
-        android:maxLength="30"
-        android:maxLines="1"
-        android:text="@string/putIpHere"
-        />
-        
 
     <Button
         android:id="@+id/sendOrderButton"
