@@ -1,0 +1,19 @@
+import java.net.ServerSocket;
+import java.net.Socket;
+
+
+public class OrderStreamReceiver {
+
+	private int port;
+	private ServerSocket serverSocket;
+	private Socket socket;
+	
+	public OrderStreamReceiver(int port) {
+		this.port = port;
+	}
+	public static void receiveOrder(String ip) {
+		
+	}
+
+
+}

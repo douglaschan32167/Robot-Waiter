@@ -1,0 +1,122 @@
+package com.example.ordertaker;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+
+import android.app.Activity;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.os.Bundle;
+import android.speech.RecognizerIntent;
+import android.view.Menu;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.TextView;
+import android.widget.Toast;
+ 
+public class MainActivity extends Activity {
+ 
+    protected static final int RESULT_SPEECH = 1;
+ 
+    private Button killButton;
+    private Button sendOrderButton;
+    private ImageButton btnSpeak;
+    private TextView txtText;
+    private String currentOrder = "";
+    private String targetIp = "127.0.0.1"; //TODO: Make this enterable
+    private int targetPort = 4321;
+    
+    OnClickListener forceQuitListener = new OnClickListener() {
+    	public void onClick(View view) {
+    		System.exit(0);
+    	}
+    };
+    
+    OnClickListener sendOrderListener = new OnClickListener() {
+    	public void onClick(View view) {
+    		try {
+				Socket socket = new Socket(targetIp, targetPort);
+				OutputStream outputStream = socket.getOutputStream();
+				outputStream.write(currentOrder.getBytes());
+				outputStream.flush();
+				outputStream.close();
+				socket.close();
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	}
+    };
+ 
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.main);
+ 
+        txtText = (TextView) findViewById(R.id.txtText);
+ 
+        btnSpeak = (ImageButton) findViewById(R.id.btnSpeak);
+        killButton = (Button) findViewById(R.id.killButton);
+        killButton.setOnClickListener(forceQuitListener);
+        sendOrderButton = (Button) findViewById(R.id.sendOrderButton);
+ 
+        btnSpeak.setOnClickListener(new View.OnClickListener() {
+ 
+            @Override
+            public void onClick(View v) {
+ 
+                Intent intent = new Intent(
+                        RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+ 
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, "en-US");
+ 
+                try {
+                    startActivityForResult(intent, RESULT_SPEECH);
+                    txtText.setText("");
+                } catch (ActivityNotFoundException a) {
+                    Toast t = Toast.makeText(getApplicationContext(),
+                            "Oops! Your device doesn't support Speech to Text",
+                            Toast.LENGTH_SHORT);
+                    t.show();
+                }
+            }
+        });
+ 
+    }
+ 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+ 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+ 
+        switch (requestCode) {
+        	case RESULT_SPEECH: {
+        		if (resultCode == RESULT_OK && null != data) {
+ 
+        			ArrayList<String> text = data
+        					.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+ 
+        			currentOrder = text.get(0);
+        			txtText.setText(text.get(0));
+        		}
+        		break;
+        }
+ 
+        }
+    }
+    
+    
+}

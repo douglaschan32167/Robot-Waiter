@@ -1,0 +1,25 @@
+import java.net.ServerSocket;
+
+
+public class OrderStreamReceiver {
+
+	private String ipAddress;
+	private ServerSocket serverSocket;
+	private Socket socket;
+	
+	public OrderStreamReceiver(String ipAddress) {
+		this.ipAddress = ipAddress;
+	}
+	public static void receiveOrder(String ip) {
+		
+	}
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+		receiveOrder("127.0.0.1");
+
+	}
+
+}

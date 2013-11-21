@@ -1,0 +1,16 @@
+
+public class OrderStreamReceiver {
+
+	public static void receiveOrder(String ip) {
+		
+	}
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+		receiveOrder("127.0.0.1");
+
+	}
+
+}
