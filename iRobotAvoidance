@@ -1,0 +1,204 @@
+/*
+ * irobotNavigationStatechart.c
+ *
+ *  Created on: Mar 7, 2013
+ *      Author:
+ */
+
+#include "irobotNavigationStatechart.h"
+#include <math.h>
+#include <stdlib.h>
+
+/* Program States */
+typedef enum{
+    INITIAL = 0,                        /* Initial state */
+    PAUSE_WAIT_BUTTON_RELEASE,            /* Paused; pause button pressed down, wait until released before detecting next press */
+    UNPAUSE_WAIT_BUTTON_PRESS,            /* Paused; wait for pause button to be pressed */
+    UNPAUSE_WAIT_BUTTON_RELEASE,        /* Paused; pause button pressed down, wait until released before returning to previous state */
+    DRIVE,                                /* Drive straight */
+    TURN,                                /* Turn */
+	//Jonathan added begin
+    FORWARD,                            /* Drive straight */
+    TURNL,                                /* Turn */
+    TURNR,                                /* Turn */
+    LOCATE,                                /* Turn */
+    WAIT
+    //Jonathan added end
+} robotState_t;
+
+#define DEG_PER_RAD            (180.0 / M_PI)        /* degrees per radian */
+#define RAD_PER_DEG            (M_PI / 180.0)        /* radians per degree */
+
+void irobotNavigationStatechart(
+    const int16_t                 maxWheelSpeed,                        /* (in) maximum wheel speed, in mm/s */
+    const int32_t                 netDistance,                        /* (in) net distance, in mm */
+    const int32_t                 netAngle,                            /* (in) net angle, in deg */
+    const irobotSensorGroup6_t     sensors,                            /* (in) irobot sensors */
+    const accelerometer_t         accel,                                /* (in) filtered accelerometer, in g */
+    const bool                    isSimulator,                        /* (in) statechart is executing within a simulator */
+    int16_t * const             pRightWheelSpeed,                    /*(out) right wheel speed */
+    int16_t * const             pLeftWheelSpeed,                    /*(out) left wheel speed */
+    int32_t * const                pState                                /*(out) current state */
+){
+    /* local state */
+    static robotState_t         state = INITIAL;                /* current program state */
+    static robotState_t            unpausedState = DRIVE;            /* state history for pause region */
+    static int32_t                distanceAtManeuverStart = 0;    /* distance robot had travelled when a maneuver begins, in mm */
+    static int32_t                angleAtManeuverStart = 0;        /* angle through which the robot had turned when a maneuver begins, in deg */
+
+    /* outputs */
+    int16_t                        leftWheelSpeed = 0;                /* speed of the left wheel, in mm/s */
+    int16_t                        rightWheelSpeed = 0;            /* speed of the right wheel, in mm/s */
+
+    /******************************************************/
+    /* state data - process inputs                        */
+    /******************************************************/
+	//Jonathan added begin
+    int dio_sensor = 1;
+    int table_aligned = 1;
+	int ultrasonicF_sensor = 0;
+    int ultrasonicR_sensor = 0;
+	int ultrasonicL_sensor = 0;
+	int oldR = 0;
+	int oldL = 0;
+    int distanceForward = 0;
+	//Jonathan added end
+
+    /******************************************************/
+    /* state transition - pause region (highest priority) */
+    /******************************************************/
+    if(   state == INITIAL
+       || state == PAUSE_WAIT_BUTTON_RELEASE
+       || state == UNPAUSE_WAIT_BUTTON_PRESS
+       || state == UNPAUSE_WAIT_BUTTON_RELEASE
+       || sensors.buttons.play                /* pause button */
+    ){
+        switch(state){
+        case INITIAL:
+            /* set state data that may change between simulation and real-world */
+            if(isSimulator){
+            }
+            else{
+            }
+            state = UNPAUSE_WAIT_BUTTON_PRESS; /* place into pause state */
+            break;
+        case PAUSE_WAIT_BUTTON_RELEASE:
+            /* remain in this state until released before detecting next press */
+            if(!sensors.buttons.play){
+                state = UNPAUSE_WAIT_BUTTON_PRESS;
+            }
+            break;
+        case UNPAUSE_WAIT_BUTTON_RELEASE:
+            /* user pressed 'pause' button to return to previous state */
+            if(!sensors.buttons.play){
+                state = unpausedState;
+            }
+            break;
+        case UNPAUSE_WAIT_BUTTON_PRESS:
+            /* remain in this state until user presses 'pause' button */
+            if(sensors.buttons.play){
+                state = UNPAUSE_WAIT_BUTTON_RELEASE;
+            }
+            break;
+        default:
+            /* must be in run region, and pause button has been pressed */
+            unpausedState = state;
+            state = PAUSE_WAIT_BUTTON_RELEASE;
+            break;
+        }
+    }
+    /**************************************/
+    /* state transition - run region      */
+    /**************************************/
+	//Jonathan added begin
+    else if(state == WAIT && dio ){
+        state = LOCATE;
+    }
+    else if(state == LOCATE && table_aligned){
+        state = DRIVE;
+    }
+    else if(state == DRIVE && ultrasonicF_sensor < frontTooClose_replace_me){
+        if (ultrasonicR_sensor > ultrasonicL_sensor){
+			state = TURNR;
+		}else{
+			state = TURNL;
+		}
+    }
+    else if(state == TURNR){
+        if (ultrasonicF_sensor > frontFarEnough_replace_me || ultrasonicR_sensor > oldR){
+            oldR = ultrasonicR_sensor;
+            distanceAtManeuverStart = netDistance;
+            state = FORWARD;
+        }
+        else oldR = ultrasonicR_sensor;
+    }
+	else if(state == TURNL){
+        if (ultrasonicF_sensor > frontFarEnough_replace_me || ultrasonicL_sensor > oldL){
+            oldL = ultrasonicL_sensor;
+            distanceAtManeuverStart = netDistance;
+            state = FORWARD;
+        }
+        else oldL = ultrasonicL_sensor;
+    }
+    else if(state == FORWARD 
+	&& (ultrasonicR_sensor > sideFarEnough_replace_me || ultrasonicL_sensor > sideFarEnough_replace_me)
+	&& distanceForward >= 250){
+        distanceForward = 0;
+        state = LOCATE;
+    }
+    else if(state == FORWARD && ultrasonicR_sensor > sideFarEnough){
+        distanceForward = netDistance - distanceAtManeuverStart;
+    }
+    else if(state == FORWARD && ultrasonicL_sensor > sideFarEnough){
+        distanceForward = netDistance - distanceAtManeuverStart;
+    }	
+    //Jonathan added end
+
+    /* else, no transitions are taken */
+
+    /*****************/
+    /* state actions */
+    /*****************/
+    switch(state){
+    case INITIAL:
+    case PAUSE_WAIT_BUTTON_RELEASE:
+    case UNPAUSE_WAIT_BUTTON_PRESS:
+    case WAIT:
+    case UNPAUSE_WAIT_BUTTON_RELEASE:
+        /* in pause mode, robot should be stopped */
+        leftWheelSpeed = rightWheelSpeed = 0;
+        break;
+
+    case DRIVE:
+    case FORWARD: //Jonathan added line
+        /* full speed ahead! */
+        leftWheelSpeed = rightWheelSpeed = maxWheelSpeed;
+        break;
+
+    case TURN:
+        leftWheelSpeed = maxWheelSpeed;
+        rightWheelSpeed = -leftWheelSpeed;
+        break;
+
+	//Jonathan added begin
+    case LOCATE:
+    case TURNL:
+        leftWheelSpeed = -maxWheelSpeed;
+        rightWheelSpeed = maxWheelSpeed;
+        break;
+
+    case TURNR:
+        leftWheelSpeed = maxWheelSpeed;
+        rightWheelSpeed = -maxWheelSpeed;
+        break;
+    //Jonathan added end
+    default:
+        /* Unknown state */
+        leftWheelSpeed = rightWheelSpeed = 0;
+        break;
+    }
+
+    /* write outputs */
+    *pLeftWheelSpeed = leftWheelSpeed;
+    *pRightWheelSpeed = rightWheelSpeed;
+}
