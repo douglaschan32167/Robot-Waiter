@@ -370,12 +370,12 @@ void irobotNavigationStatechart( //parameters
                 }
                 break;
         case TURN_RIGHT:
-            	leftWheelSpeed = -maxWheelSpeed/2;
-            	rightWheelSpeed = maxWheelSpeed/2;
+            	leftWheelSpeed = -maxWheelSpeed/4;
+            	rightWheelSpeed = maxWheelSpeed/4;
             	break;
         case TURN_LEFT:
-        		leftWheelSpeed = maxWheelSpeed/2;
-        		rightWheelSpeed = -maxWheelSpeed/2;
+        		leftWheelSpeed = maxWheelSpeed/4;
+        		rightWheelSpeed = -maxWheelSpeed/4;
         		break;
         case MOVEMENT:
                 leftWheelSpeed = 0;
