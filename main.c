@@ -1,9 +1,15 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/types.h>
+#include <time.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <pthread.h>
 #include "MyRio.h"
 #include "Accelerometer.h"
@@ -23,22 +29,65 @@ const int32_t turnAngle = 90;			/* angle to turn, in mm */
 const int16_t WHEEL_SPEED = 200;		/* maximum speed to turn the wheels, in mm/s */
 
 typedef struct {
-	char *directions;
+	char directions;
 } direction_data;
 
 direction_data dir_data;
 
 void *Get_Directions() {
-	printf("start thread func");
-	//char* testdirs = "NEESSWWNNWNS0";
-	dir_data.directions = 'R';//changes pointer
-	sleep(5);
-	dir_data.directions = '0';
-	sleep(4);
-	dir_data.directions = 'L';//changes pointer
-	sleep(5);
-	dir_data.directions = '0';
-	pthread_exit(NULL);
+        printf("start thread func");
+    int listenfd = 0, connfd = 0;
+    struct sockaddr_in serv_addr;
+
+    char cmd = '0';
+    time_t ticks;
+        printf("start");
+
+    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    memset(&serv_addr, '0', sizeof(serv_addr));
+    //memset(sendBuff, '0', sizeof(sendBuff));
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serv_addr.sin_port = htons(5000);
+
+    bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+
+    listen(listenfd, 10);
+
+    while(1)
+    {
+        connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
+
+        //ticks = time(NULL);
+        //snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
+        //write(connfd, sendBuff, strlen(sendBuff));
+                if (read(connfd, &cmd, 1) < 0) {
+                        printf("error in read");
+                } else  {
+                        printf("got something");
+                        printf("%c", cmd);
+                        if (cmd == 'S') {
+                                dir_data.directions = '0';
+                        } else {
+                                dir_data.directions = cmd;
+                        }
+                }
+        close(connfd);
+        sleep(1);
+     }
+        //char* testdirs = "NEESSWWNNWNS0";
+        //dir_data.directions = 'R';//changes pointer
+        //sleep(5);
+        //dir_data.directions = '0';
+        //sleep(4);
+        //dir_data.directions = 'L';//changes pointer
+        //sleep(5);
+        //dir_data.directions = '0';
+        pthread_exit(NULL);
+}
+void printtest(char a) {
+	printf("%c", a);
 }
 
 int main(int argc, char **argv)
@@ -82,6 +131,7 @@ int main(int argc, char **argv)
 	NiFpga_IfIsNotError(status, irobotOpen(port));
 	dir_data.directions = calloc(0, 20);
 
+	//Get_Directions(NULL);
   	pthread_t ptt;
     int thread_start = pthread_create(&ptt, NULL, Get_Directions, NULL);
     if (thread_start != 0) {
@@ -107,6 +157,7 @@ int main(int argc, char **argv)
 			accelValue.z = Accel_ReadZ(&accelDevice);
 		}
 
+		printf("%c", dir_data.directions);
 		/* Execute statechart */
 		irobotNavigationStatechart(
 			WHEEL_SPEED,
