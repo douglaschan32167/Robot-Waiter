@@ -79,7 +79,7 @@ void irobotNavigationStatechart( //parameters
                         || state == PAUSE_WAIT_BUTTON_RELEASE
                         || state == UNPAUSE_WAIT_BUTTON_PRESS
                         || state == UNPAUSE_WAIT_BUTTON_RELEASE
-                        || sensors.buttons.play /* pause button */
+                        || sensors.bumps_wheelDrops.bumpLeft /* pause button */
         ){
                 switch(state){
                 case INITIAL:
@@ -92,20 +92,20 @@ void irobotNavigationStatechart( //parameters
                         break;
                 case PAUSE_WAIT_BUTTON_RELEASE:
                         /* remain in this state until released before detecting next press */
-                        if(!sensors.buttons.play){
+                        if(!sensors.bumps_wheelDrops.bumpLeft){
                                 state = UNPAUSE_WAIT_BUTTON_PRESS;
                         }
                         break;
                 case UNPAUSE_WAIT_BUTTON_RELEASE:
                         /* user pressed 'pause' button to return to previous state */
-                        if(!sensors.buttons.play){
+                        if(!sensors.bumps_wheelDrops.bumpLeft){
                                 state = unpausedState;
                                 printf("starting to unpausedstate");
                         }
                         break;
                 case UNPAUSE_WAIT_BUTTON_PRESS:
                         /* remain in this state until user presses 'pause' button */
-                        if(sensors.buttons.play){
+                        if(sensors.bumps_wheelDrops.bumpLeft){
                                 state = UNPAUSE_WAIT_BUTTON_RELEASE;
                         }
                         break;
@@ -284,10 +284,14 @@ void irobotNavigationStatechart( //parameters
         } else if (state == TURN_RIGHT) {
         	if (dir_to_go == '0') {
         		state = STOP;
+        	} else if (dir_to_go == 'D') {
+        		state = DRIVE_LIMITLESS;
         	}
         } else if (state == DRIVE_LIMITLESS) {
         	if (dir_to_go == '0') {
         		state = STOP;
+        	} else if (dir_to_go == 'R') {
+        		state = TURN_RIGHT;
         	}
         }
 
