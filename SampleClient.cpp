@@ -35,8 +35,22 @@ Usage [optional]:
 #include <conio.h>
 #include <winsock2.h>
 
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <queue>
+#include <process.h>
+
 #include "NatNetTypes.h"
 #include "NatNetClient.h"
+
+
+// Need to link with Ws2_32.lib, Mswsock.lib, and Advapi32.lib
+#pragma comment (lib, "Ws2_32.lib")
+#pragma comment (lib, "Mswsock.lib")
+#pragma comment (lib, "AdvApi32.lib")
 
 #pragma warning( disable : 4996 )
 
@@ -48,6 +62,7 @@ void __cdecl MessageHandler(int msgType, char* msg);		            // receives Na
 void resetClient();
 int CreateClient(int iConnectionType);
 double calculate_angle(sRigidBodyData trackable1, sRigidBodyData trackable2, sRigidBodyData trackable3);
+double calculate_distance(sRigidBodyData trackable1, sRigidBodyData trackable2);
 unsigned int MyServersDataPort = 3130;
 unsigned int MyServersCommandPort = 3131;
 
@@ -57,8 +72,321 @@ FILE* fp;
 char szMyIPAddress[128] = "";
 char szServerIPAddress[128] = "";
 
+#define PI 3.14159265358979323846
+#define ROBOT_PORT "5000"
+#define DEFAULT_BUFLEN 512
+#define KITCHEN 2
+#define TABLE_ONE 3
+#define TABLE_TWO 4
+#define TABLE_THREE 5
+#define TABLE_FOUR 6
+
+bool init_called = false;
+sRigidBodyData location_data[7];
+double distances[5][5]; //first number is table number, second is number of destination table
+//int destination = KITCHEN;
+int dests[11];
+char state = '0';
+
+struct command {
+	char cmd;
+	int packet_counter;
+	char state;
+};
+command acommand;
+struct dest_container {
+	int dests[10];
+	int step_num;
+	int num_dests;
+	CRITICAL_SECTION lock;
+};
+dest_container dest_cont;
+
+unsigned int _stdcall send_cmd(void *cmd) {
+//int send_cmd(char cmd) {
+	    WSADATA wsaData;
+		const char *test = &acommand.cmd;
+		const char *test2 = &acommand.state;
+	//*test = acommand.cmd;
+    SOCKET ConnectSocket = INVALID_SOCKET;
+    struct addrinfo *result = NULL,
+                    *ptr = NULL,
+                    hints;
+    //char sendbuf = 'R';
+    char recvbuf[DEFAULT_BUFLEN];
+    int iResult;
+    int recvbuflen = DEFAULT_BUFLEN;
+    
+    // Validate the parameters
+    //if (argc != 2) {
+    //    printf("usage: %s server-name\n", argv[0]);
+    //    return 1;
+    //}
+
+    // Initialize Winsock
+    iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
+    if (iResult != 0) {
+        printf("WSAStartup failed with error: %d\n", iResult);
+        return 1;
+    }
+
+    ZeroMemory( &hints, sizeof(hints) );
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+
+    // Resolve the server address and port
+    iResult = getaddrinfo("172.22.11.2", ROBOT_PORT, &hints, &result);//argv[1] 172.22.11.2
+    if ( iResult != 0 ) {
+        printf("getaddrinfo failed with error: %d\n", iResult);
+        WSACleanup();
+        return 1;
+    }
+
+    // Attempt to connect to an address until one succeeds
+    for(ptr=result; ptr != NULL ;ptr=ptr->ai_next) {
+
+        // Create a SOCKET for connecting to server
+        ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, 
+            ptr->ai_protocol);
+        if (ConnectSocket == INVALID_SOCKET) {
+            printf("socket failed with error: %ld\n", WSAGetLastError());
+            WSACleanup();
+            return 1;
+        }
+
+        // Connect to server.
+        iResult = connect( ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+        if (iResult == SOCKET_ERROR) {
+            closesocket(ConnectSocket);
+            ConnectSocket = INVALID_SOCKET;
+            continue;
+        }
+        break;
+    }
+
+    freeaddrinfo(result);
+
+    if (ConnectSocket == INVALID_SOCKET) {
+        printf("Unable to connect to server!\n");
+        WSACleanup();
+        return 1;
+    }
+
+    // Send an initial buffer
+    iResult = send( ConnectSocket, test, 1, 0 );
+	acommand.state = acommand.cmd;
+    if (iResult == SOCKET_ERROR) {
+        printf("send failed with error: %d\n", WSAGetLastError());
+        closesocket(ConnectSocket);
+        WSACleanup();
+        return 1;
+    }
+
+    printf("Bytes Sent: %ld\n", iResult);
+
+    // shutdown the connection since no more data will be sent
+    iResult = shutdown(ConnectSocket, SD_SEND);
+    if (iResult == SOCKET_ERROR) {
+        printf("shutdown failed with error: %d\n", WSAGetLastError());
+        closesocket(ConnectSocket);
+        WSACleanup();
+        return 1;
+    }
+
+    // Receive until the peer closes the connection
+    //do {
+
+    //    iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
+    //    if ( iResult > 0 )
+    //        printf("Bytes received: %d\n", iResult);
+    //    else if ( iResult == 0 )
+    //        printf("Connection closed\n");
+    //    else
+    //        printf("recv failed with error: %d\n", WSAGetLastError());
+
+    //} while( iResult > 0 );
+
+    // cleanup
+    closesocket(ConnectSocket);
+    WSACleanup();
+
+    return 0;
+}
+
+int get_order() {
+    WSADATA wsaData;
+    int iResult;
+
+    SOCKET ListenSocket = INVALID_SOCKET;
+    SOCKET ClientSocket = INVALID_SOCKET;
+
+    struct addrinfo *result = NULL;
+    struct addrinfo hints;
+
+    int iSendResult;
+    char recvbuf[32];
+    int recvbuflen = 32;
+    
+    // Initialize Winsock
+    iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
+    if (iResult != 0) {
+        printf("WSAStartup failed with error: %d\n", iResult);
+        return 1;
+    }
+
+    ZeroMemory(&hints, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    hints.ai_flags = AI_PASSIVE;
+
+    // Resolve the server address and port
+    iResult = getaddrinfo("10.10.67.118", "4321", &hints, &result);
+    if ( iResult != 0 ) {
+        printf("getaddrinfo failed with error: %d\n", iResult);
+        WSACleanup();
+        return -1;
+    }
+
+    // Create a SOCKET for connecting to server
+    ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+    if (ListenSocket == INVALID_SOCKET) {
+        printf("socket failed with error: %ld\n", WSAGetLastError());
+        freeaddrinfo(result);
+        WSACleanup();
+        return -1;
+    }
+
+    // Setup the TCP listening socket
+    iResult = bind( ListenSocket, result->ai_addr, (int)result->ai_addrlen);
+    if (iResult == SOCKET_ERROR) {
+        printf("bind failed with error: %d\n", WSAGetLastError());
+        freeaddrinfo(result);
+        closesocket(ListenSocket);
+        WSACleanup();
+        return -1;
+    }
+
+    freeaddrinfo(result);
+
+    iResult = listen(ListenSocket, SOMAXCONN);
+    if (iResult == SOCKET_ERROR) {
+        printf("listen failed with error: %d\n", WSAGetLastError());
+        closesocket(ListenSocket);
+        WSACleanup();
+        return -1;
+    }
+
+    // Accept a client socket
+    ClientSocket = accept(ListenSocket, NULL, NULL);
+    if (ClientSocket == INVALID_SOCKET) {
+        printf("accept failed with error: %d\n", WSAGetLastError());
+        closesocket(ListenSocket);
+        WSACleanup();
+        return -1;
+    }
+
+    // No longer need server socket
+    closesocket(ListenSocket);
+
+    // Receive until the peer shuts down the connection
+	int table_num = -1;
+    do {
+
+        iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
+        if (iResult > 0) {
+            printf("Bytes received: %d\n", iResult);
+			printf("%s", recvbuf);
+			printf("%i", recvbuf[0] - '0');
+			table_num = recvbuf[0] -'0';
+
+        // Echo the buffer back to the sender
+            //iSendResult = send( ClientSocket, recvbuf, iResult, 0 );
+            //if (iSendResult == SOCKET_ERROR) {
+            //    printf("send failed with error: %d\n", WSAGetLastError());
+            //    closesocket(ClientSocket);
+            //    WSACleanup();
+            //    return 1;
+            //}
+            //printf("Bytes sent: %d\n", iSendResult);
+        }
+        else if (iResult == 0)
+            printf("Connection closing...\n");
+        else  {
+            printf("recv failed with error: %d\n", WSAGetLastError());
+            closesocket(ClientSocket);
+            WSACleanup();
+            return -1;
+        }
+
+    } while (iResult > 0);
+
+    // shutdown the connection since we're done
+    iResult = shutdown(ClientSocket, SD_SEND);
+    if (iResult == SOCKET_ERROR) {
+        printf("shutdown failed with error: %d\n", WSAGetLastError());
+        closesocket(ClientSocket);
+        WSACleanup();
+        return -1;
+    }
+
+    // cleanup
+    closesocket(ClientSocket);
+    WSACleanup();
+
+    return table_num;
+}
+
+unsigned int _stdcall update_orders(void *not_used) {
+	while (1) {
+		int next_order = get_order();
+		if (next_order < 0) {
+			printf("error getting order");
+			return 1;
+		}
+		EnterCriticalSection(&dest_cont.lock);
+		int i = 0;
+		for (; i < dest_cont.num_dests; i++ ) {
+			dest_cont.dests[i] = dest_cont.dests[dest_cont.step_num + i];
+		}
+		int a[11];
+		memcpy(a, dest_cont.dests, 11);
+		dest_cont.step_num = 0;
+		dest_cont.dests[dest_cont.num_dests] = next_order;
+		dest_cont.dests[dest_cont.num_dests+1] = -1;
+		dest_cont.num_dests += 1;
+		LeaveCriticalSection(&dest_cont.lock);
+	}
+
+}
+
+
+void init() {
+	for (int i = 2; i < 7; i++) {
+		for (int j = 2; j < 7; j++) {
+			if (i == j) {
+				distances[i-2][j-2] = 1000;
+			} else {
+				distances[i-2][j-2] = calculate_distance(location_data[i], location_data[j]);
+			}
+		}
+	}
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
+	dest_cont.dests[0] = KITCHEN;
+	dest_cont.dests[1] = TABLE_ONE;
+	dest_cont.dests[2] = TABLE_TWO;
+	dest_cont.dests[3] = KITCHEN;
+	dest_cont.dests[4] = -1;
+	InitializeCriticalSection(&(dest_cont.lock));
+	//memset(dest_cont.dests, -1, 11);
+	dest_cont.step_num = 0;
+	dest_cont.num_dests = 4;
+	acommand.packet_counter = 1;
+	//HANDLE thread = (HANDLE)::_beginthreadex(NULL, 0, update_orders,  NULL, 0, NULL);
     int iResult;
     int iConnectionType = ConnectionType_Multicast;
     //int iConnectionType = ConnectionType_Unicast;
@@ -71,7 +399,7 @@ int _tmain(int argc, _TCHAR* argv[])
     }
     else
     {
-        strcpy(szServerIPAddress, "");		// not specified - assume server is local machine
+        strcpy(szServerIPAddress, "10.10.67.210");		// not specified - assume server is local machine
         printf("Connecting to server at LocalMachine\n");
     }
     if(argc>2)
@@ -81,7 +409,7 @@ int _tmain(int argc, _TCHAR* argv[])
     }
     else
     {
-        strcpy(szMyIPAddress, "");          // not specified - assume server is local machine
+        strcpy(szMyIPAddress, "10.10.64.173");          // not specified - assume server is local machine
         printf("Connecting from LocalMachine...\n");
     }
 
@@ -304,9 +632,15 @@ int CreateClient(int iConnectionType)
 
 }
 
+
 // DataHandler receives data from the server
 void __cdecl DataHandler(sFrameOfMocapData* data, void* pUserData)
 {
+	if (acommand.packet_counter != 4) {
+		acommand.packet_counter++;
+		return;
+	}
+	acommand.packet_counter = 0;
 	NatNetClient* pClient = (NatNetClient*) pUserData;
 
 	printf("Received frame %d\n", data->iFrame);
@@ -345,9 +679,12 @@ void __cdecl DataHandler(sFrameOfMocapData* data, void* pUserData)
 	// Rigid Bodies
 	printf("Rigid Bodies [Count=%d]\n", data->nRigidBodies);
 	double theta = calculate_angle(data->RigidBodies[0], data->RigidBodies[1], data->RigidBodies[2]);
-	printf("\n\n\nAngle is %Lf\n\n\n", theta);
+	double dist_calc = calculate_distance(data->RigidBodies[0], data->RigidBodies[3]);
+	printf("\n\n\nAngle is %Lf and distance is %Lf\n\n\n", theta*180/3.14, dist_calc);
+
 	for(i=0; i < data->nRigidBodies; i++)
 	{
+		//location_data[i] = data->RigidBodies[i];
 		printf("Rigid Body [ID=%d  Error=%3.2f]\n", data->RigidBodies[i].ID, data->RigidBodies[i].MeanError);
 		printf("\tx\ty\tz\tqx\tqy\tqz\tqw\n");
 		printf("\t%3.2f\t%3.2f\t%3.2f\t%3.2f\t%3.2f\t%3.2f\t%3.2f\n",
@@ -411,8 +748,63 @@ void __cdecl DataHandler(sFrameOfMocapData* data, void* pUserData)
 		sMarker marker = data->LabeledMarkers[i];
 		printf("Labeled Marker [ID=%d] [size=%3.2f] [pos=%3.2f,%3.2f,%3.2f]\n", marker.ID, marker.size, marker.x, marker.y, marker.z);
 	}
+		if (!init_called) {
+		//init();
+		init_called = true;
+	}
+	EnterCriticalSection(&dest_cont.lock);
+	int destination = dest_cont.dests[dest_cont.step_num];
+	int stn = dest_cont.step_num;
+	LeaveCriticalSection(&dest_cont.lock);
+	if (destination >0) {
+		double angle_to_dest = calculate_angle(data->RigidBodies[0], data->RigidBodies[1], data->RigidBodies[destination]);
+		double dist_to_dest = calculate_distance(data->RigidBodies[0], data->RigidBodies[destination]);
+		printf("==================================== %f", dist_to_dest);
+		printf("angle is %f", angle_to_dest);
+		char return_val[1];
+		if (dist_to_dest < .3) {
+			if (acommand.state != '0') {
+				acommand.cmd = '0';
+				send_cmd(NULL);
+				//HANDLE thread = (HANDLE)::_beginthreadex(NULL, 0, send_cmd,  &(acommand.cmd), 0, NULL);
+				//state = '0';
+				EnterCriticalSection(&dest_cont.lock);
+				dest_cont.step_num += 1;
+				dest_cont.num_dests -= 1;
+				LeaveCriticalSection(&dest_cont.lock);
+			}
+
+			//dest_cont.step_num += 1;
+			return;
+		}
+		if ( angle_to_dest <165 ) {
+			if (acommand.state != 'R') {
+				acommand.cmd = 'R';
+				send_cmd(NULL);
+				//HANDLE thread = (HANDLE)::_beginthreadex(NULL, 0, send_cmd,  &(acommand.cmd), 0, NULL);
+			}
+			
+			state = 'R';
+			return;
+		}  else if (angle_to_dest > 170) {
+			if (acommand.state == 'R' || acommand.state == 'L') {
+				acommand.cmd = '0';
+				send_cmd(NULL);
+				//HANDLE thread = (HANDLE)::_beginthreadex(NULL, 0, send_cmd,  &(acommand.cmd), 0, NULL);
+				//state = '0';
+			} else {
+				if (acommand.state != 'D') {
+					acommand.cmd = 'D';
+					send_cmd(NULL);
+					//HANDLE thread = (HANDLE)::_beginthreadex(NULL, 0, send_cmd,  &(acommand.cmd), 0, NULL);
+				}
+				//state = 'D';
+			}
+		}
+	}
 
 }
+
 
 // MessageHandler receives NatNet error/debug messages
 void __cdecl MessageHandler(int msgType, char* msg)
@@ -487,8 +879,8 @@ double calculate_angle(sRigidBodyData trackable1, sRigidBodyData trackable2, sRi
 	//create vector between trackale1 and trackable2; another vector between trackable2 and trackable3
 	double vector_t1_to_t2[2];
 	double vector_t1_to_t3[2];
-	vector_t1_to_t2[0] = trackable1.x - trackable2.x;
-	vector_t1_to_t2[1] = trackable1.z - trackable2.z;
+	vector_t1_to_t2[0] = trackable2.x - trackable1.x;
+	vector_t1_to_t2[1] = trackable2.z - trackable1.z;
 	vector_t1_to_t3[0] = trackable3.x - trackable1.x;
 	vector_t1_to_t3[1] = trackable3.z - trackable1.z;
 	
@@ -497,10 +889,21 @@ double calculate_angle(sRigidBodyData trackable1, sRigidBodyData trackable2, sRi
 	
 	//computing the magnitude of the 2 vectors
 	double magn_1_to_2 = sqrt(vector_t1_to_t2[0] * vector_t1_to_t2[0] + vector_t1_to_t2[1] * vector_t1_to_t2[1]);
-	double magn_1_to_3 = sqrt(vector_t1_to_t3[0] * vector_t1_to_t3[0] + vector_t1_to_t3[1] * vector_t1_to_t2[1]);
+	double magn_1_to_3 = sqrt(vector_t1_to_t3[0] * vector_t1_to_t3[0] + vector_t1_to_t3[1] * vector_t1_to_t3[1]);
 	
 	//computing the angle using the arccosine
-	double theta = acos(dot_product/(magn_1_to_2 * magn_1_to_3));
+	double formula = dot_product/(magn_1_to_2 * magn_1_to_3); 
+	double theta = acos(formula);
+
+	printf("\n\ndot_product: %f, magnitude1: %f, magnitude2: %f, formula: %f, angle: %f\n\n\n", dot_product, magn_1_to_2, magn_1_to_3, formula, theta*180/PI);
 	
-	return theta;
+	return theta*180/PI;
 }
+
+double calculate_distance(sRigidBodyData trackable1, sRigidBodyData trackable2){
+
+	double distance = sqrt((trackable1.x - trackable2.x)*(trackable1.x - trackable2.x) + 
+		(trackable1.z - trackable2.z)*(trackable1.z - trackable2.z));
+	return distance;
+}
+//HANDLE thread = (HANDLE)::_beginthreadex(NULL, 0, send_cmd,  '0', 0, NULL);

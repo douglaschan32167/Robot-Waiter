@@ -71,11 +71,8 @@ public class MainActivity extends Activity {
 				tableThenOrder = "6 " + tableThenOrder;
 			} else if (tableThenOrder.contains("table 4") || (tableThenOrder.contains("table four"))) {
 				tableThenOrder = "7 " + tableThenOrder;
-			} else {
-				System.out.println("You must include a table number");
-				return;
 			}
-			outputStream.write(tableThenOrder.getBytes());
+			outputStream.write(currentOrder.getBytes());
 			outputStream.flush();
 			outputStream.close();
 			socket.close();

@@ -8,7 +8,7 @@
       "qualifier": ""
     },
     "jarFileFingerprint": "f831655c50b92c41e366442d09511ea84270c45e",
-    "jarFileModificationDate": "2013-08-11T11:25:02.942-07:00",
+    "jarFileModificationDate": "2013-07-01T16:00:10.024-07:00",
     "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\jce.jar",
     "javaRuntime": true
   },
@@ -20,8 +20,8 @@
       "micro": 0,
       "qualifier": ""
     },
-    "jarFileFingerprint": "4638ca8e3b8ca6b71d026b8b071d3e52921e9475",
-    "jarFileModificationDate": "2013-08-11T11:25:02.902-07:00",
+    "jarFileFingerprint": "3445e1bd8fd1de2bf4784708818f80b3c8f0c12c",
+    "jarFileModificationDate": "2013-10-08T07:25:36-07:00",
     "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\ext\\dnsns.jar",
     "javaRuntime": true
   },
@@ -33,8 +33,8 @@
       "micro": 0,
       "qualifier": ""
     },
-    "jarFileFingerprint": "757712df7bc0c3c41e435e3b6634254d5dd78e9e",
-    "jarFileModificationDate": "2013-08-11T11:25:05.165-07:00",
+    "jarFileFingerprint": "ada009645cb2cc623573c4bc1ba00a045e06491d",
+    "jarFileModificationDate": "2013-10-08T08:39:54-07:00",
     "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\ext\\localedata.jar",
     "javaRuntime": true
   },
@@ -46,8 +46,8 @@
       "micro": 0,
       "qualifier": ""
     },
-    "jarFileFingerprint": "c3f43e281dfb0969377a76a883d0255aa4bfa5ad",
-    "jarFileModificationDate": "2013-08-11T11:25:02.963-07:00",
+    "jarFileFingerprint": "b01a2234d70b3f0783bdccf80141015bf89451f9",
+    "jarFileModificationDate": "2013-10-08T08:04:41-07:00",
     "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\resources.jar",
     "javaRuntime": true
   },
@@ -59,8 +59,8 @@
       "micro": 0,
       "qualifier": ""
     },
-    "jarFileFingerprint": "24ebe082a3c36820d7ffcbdf7399f2dc83d98472",
-    "jarFileModificationDate": "2013-08-11T11:25:05.140-07:00",
+    "jarFileFingerprint": "1f64f2dc349c7b5d45fe7397819be075fe36efaa",
+    "jarFileModificationDate": "2013-10-08T08:39:29-07:00",
     "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\jsse.jar",
     "javaRuntime": true
   },
@@ -72,8 +72,8 @@
       "micro": 0,
       "qualifier": ""
     },
-    "jarFileFingerprint": "52711bfe6f55b7f26c86db28f9791dfd05c09351",
-    "jarFileModificationDate": "2013-08-11T11:25:02.933-07:00",
+    "jarFileFingerprint": "0e9fc49aafbb82052439e1ac1e3a99833fdb92b1",
+    "jarFileModificationDate": "2013-10-08T07:46:57-07:00",
     "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\ext\\zipfs.jar",
     "javaRuntime": true
   },
@@ -85,23 +85,10 @@
       "micro": 0,
       "qualifier": ""
     },
-    "jarFileFingerprint": "c4c7923b11e98bc8d1d32bfd2ff6363d212ead80",
-    "jarFileModificationDate": "2013-08-11T11:25:02.931-07:00",
+    "jarFileFingerprint": "95dc9053062d68cde4e8c38494cc63aefd7b0a42",
+    "jarFileModificationDate": "2013-10-08T07:22:43-07:00",
     "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\ext\\sunec.jar",
     "javaRuntime": true
-  },
-  {
-    "symbolicName": "android-support-v4",
-    "version": {
-      "major": -1,
-      "minor": -1,
-      "micro": -1,
-      "qualifier": ""
-    },
-    "jarFileFingerprint": "5896b0a4e377ac4242eb2bc785220c1c4fc052f4",
-    "jarFileModificationDate": "2013-11-13T00:10:02.954-08:00",
-    "location": "C:\\Users\\Douglas\\Documents\\College Work\\EE 149\\robotwaiter\\voiceRecognition\\OrderTaker\\libs\\android-support-v4.jar",
-    "javaRuntime": false
   },
   {
     "symbolicName": "jre",
@@ -111,8 +98,8 @@
       "micro": 0,
       "qualifier": ""
     },
-    "jarFileFingerprint": "f13fde9ebc1116fd44d394ead13d21e797da9582",
-    "jarFileModificationDate": "2013-08-11T11:25:04.907-07:00",
+    "jarFileFingerprint": "36d1d282d74feb2ee8fadf44c737098f150d0084",
+    "jarFileModificationDate": "2013-10-08T08:39:28-07:00",
     "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\rt.jar",
     "javaRuntime": true
   },
@@ -124,8 +111,8 @@
       "micro": 0,
       "qualifier": ""
     },
-    "jarFileFingerprint": "ef96f248403f33717a0fac9a6d01032fcfec7fd8",
-    "jarFileModificationDate": "2013-08-11T11:25:02.901-07:00",
+    "jarFileFingerprint": "d3ab116e3e0256d86ea15acfd81c3d7394fec12f",
+    "jarFileModificationDate": "2013-10-08T07:43:24-07:00",
     "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\ext\\access-bridge-32.jar",
     "javaRuntime": true
   },
@@ -137,9 +124,9 @@
       "micro": 0,
       "qualifier": ""
     },
-    "jarFileFingerprint": "0045d6831313213e85eb4903dc94d081ecd78df8",
-    "jarFileModificationDate": "2013-08-11T11:25:04.958-07:00",
-    "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\charsets.jar",
+    "jarFileFingerprint": "b2bef2ebb0916eb6bdd6bd29a97ab94c23618dc3",
+    "jarFileModificationDate": "2013-05-01T04:58:52-07:00",
+    "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\ext\\QTJava.zip",
     "javaRuntime": true
   },
   {
@@ -150,8 +137,34 @@
       "micro": 0,
       "qualifier": ""
     },
-    "jarFileFingerprint": "5c2668011240d0623e54418b0f2bbac8d63858ed",
-    "jarFileModificationDate": "2013-08-11T11:25:02.942-07:00",
+    "jarFileFingerprint": "35aa93e1c4923ab9d2cfb992e4b3d89c7521abd8",
+    "jarFileModificationDate": "2013-10-08T08:39:37-07:00",
+    "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\charsets.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "android-support-v4",
+    "version": {
+      "major": -1,
+      "minor": -1,
+      "micro": -1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "5896b0a4e377ac4242eb2bc785220c1c4fc052f4",
+    "jarFileModificationDate": "2013-11-07T18:01:11.253-08:00",
+    "location": "C:\\Users\\dougl_000\\Documents\\College Work\\EE 149\\robot waiter\\voiceRecognition\\OrderTaker\\libs\\android-support-v4.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "16c2f22bbf5f8781b37b32ceae582ed3012131d2",
+    "jarFileModificationDate": "2013-10-08T08:04:41-07:00",
     "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\jfr.jar",
     "javaRuntime": true
   },
@@ -163,8 +176,8 @@
       "micro": 0,
       "qualifier": ""
     },
-    "jarFileFingerprint": "5da320e46f1c616986563b2e788b5a0569cad088",
-    "jarFileModificationDate": "2013-08-11T11:25:02.931-07:00",
+    "jarFileFingerprint": "97e3bcb13f325218fcf9d2286aa7ce6e8c231b7a",
+    "jarFileModificationDate": "2013-10-08T07:39:23-07:00",
     "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\ext\\sunjce_provider.jar",
     "javaRuntime": true
   },
@@ -176,8 +189,8 @@
       "micro": 0,
       "qualifier": ""
     },
-    "jarFileFingerprint": "3fd7709166f70fe311b45a7bafe7cdccbecf6b04",
-    "jarFileModificationDate": "2013-08-11T11:25:02.932-07:00",
+    "jarFileFingerprint": "b4085004247b082b1d95f3bbf47cee40f03d3f09",
+    "jarFileModificationDate": "2013-10-08T07:24:12-07:00",
     "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\ext\\sunpkcs11.jar",
     "javaRuntime": true
   },
@@ -190,8 +203,8 @@
       "qualifier": ""
     },
     "jarFileFingerprint": "34d1182407c92fcab06a6d769019b9f59c3c5e23",
-    "jarFileModificationDate": "2013-11-13T00:36:29.169-08:00",
-    "location": "C:\\Users\\Douglas\\android-sdks\\platforms\\android-19\\android.jar",
+    "jarFileModificationDate": "2013-11-07T17:58:44.401-08:00",
+    "location": "C:\\Users\\dougl_000\\android-sdks\\platforms\\android-19\\android.jar",
     "javaRuntime": false
   },
   {
@@ -203,7 +216,7 @@
       "qualifier": ""
     },
     "jarFileFingerprint": "a3d1a9689f1c8e36ab64fb669df92076771c42f2",
-    "jarFileModificationDate": "2013-08-11T11:25:02.932-07:00",
+    "jarFileModificationDate": "2013-07-01T16:00:09.910-07:00",
     "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\ext\\sunmscapi.jar",
     "javaRuntime": true
   },
@@ -215,8 +228,8 @@
       "micro": 0,
       "qualifier": ""
     },
-    "jarFileFingerprint": "7f1d3d364b118acd3a478e6d678cbac3668c9455",
-    "jarFileModificationDate": "2013-08-11T11:25:02.902-07:00",
+    "jarFileFingerprint": "8348ffceddde6f58ddebc0e54aa905e25d03abef",
+    "jarFileModificationDate": "2013-10-08T07:42:53-07:00",
     "location": "C:\\Program Files (x86)\\Java\\jre7\\lib\\ext\\jaccess.jar",
     "javaRuntime": true
   }

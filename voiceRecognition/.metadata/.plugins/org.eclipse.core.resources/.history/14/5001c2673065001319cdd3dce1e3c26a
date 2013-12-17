@@ -75,7 +75,7 @@ public class MainActivity extends Activity {
 				System.out.println("You must include a table number");
 				return;
 			}
-			outputStream.write(tableThenOrder.getBytes());
+			outputStream.write(currentOrder.getBytes());
 			outputStream.flush();
 			outputStream.close();
 			socket.close();

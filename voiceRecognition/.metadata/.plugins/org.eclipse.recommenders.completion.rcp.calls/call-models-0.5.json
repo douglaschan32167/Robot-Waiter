@@ -18,5 +18,10 @@
     "location": "C:\\Users\\Douglas\\Documents\\College Work\\EE 149\\robotwaiter\\voiceRecognition\\Order Receiver\\src",
     "status": "UNRESOLVED",
     "error": "No class path info available for \u0027C:\\Users\\Douglas\\Documents\\College Work\\EE 149\\robotwaiter\\voiceRecognition\\Order Receiver\\src\u0027. Skipped."
+  },
+  "C:\\Users\\dougl_000\\android-sdks\\platforms\\android-19\\android.jar": {
+    "location": "C:\\Users\\dougl_000\\android-sdks\\platforms\\android-19\\android.jar",
+    "status": "UNRESOLVED",
+    "error": "No call model found for \u0027C:\\Users\\dougl_000\\android-sdks\\platforms\\android-19\\android.jar\u0027. Neither fingerprint \u002734d1182407c92fcab06a6d769019b9f59c3c5e23\u0027 nor symbolic name \u0027android\u0027 are known."
   }
 }
