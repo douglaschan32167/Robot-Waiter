@@ -117,14 +117,17 @@ void irobotNavigationStatechart(
         state = DRIVE;
     }
     else if(state == DRIVE && dio_A0){
-        if (dio_A1){
+        if (dio_A1 && !dio_A2){
 			state = TURNL;
 			angleAtManeuverStart = netAngle;
-		}else if (dio_A2){
+		}else if (dio_A2  && !dio_A1){
 			state = TURNR;
 			angleAtManeuverStart = netAngle;
-		}else{
+		}else if (dio_A1 && dio_A2){
 			state = WAIT;
+		}else{
+			state = TURNL;
+			angleAtManeuverStart = netAngle;
 		}
     }
     else if(state == TURNR){
@@ -155,10 +158,10 @@ void irobotNavigationStatechart(
         distanceForward = 0;
         state = LOCATE;
     }
-    else if(state == FORWARD && dio_A1 && previous == TURNL){
+    else if(state == FORWARD && !dio_A1 && previous == TURNL){
         distanceForward = netDistance - distanceAtManeuverStart;
     }
-    else if(state == FORWARD && dio_A2 && previous == TURNR){
+    else if(state == FORWARD && !dio_A2 && previous == TURNR){
         distanceForward = netDistance - distanceAtManeuverStart;
     }else if(state == WAIT){
     	if (!dio_A0){
