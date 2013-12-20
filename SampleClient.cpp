@@ -13,6 +13,25 @@
 // the use of this software, even if advised of the possibility of such damage.
 //=============================================================================
 
+/** 
+NOTE BY DOUGLAS CHAN:
+
+Some of the code for this project was based off of work by other people which is publically available online. I attempt to give credit to them here.
+
+This code was based off of code found at many sources. The basis for a lot of it was the sample code found by downloading the NatNet Sdk from the
+tracking tools website. http://www.naturalpoint.com/optitrack/products/natnet-sdk/
+
+Code for sending commands and receiving orders from the android device was based off of the example server and client code posted on the microsoft website,
+which can be found at http://msdn.microsoft.com/en-us/library/windows/desktop/ms737889(v=vs.85).aspx
+
+I also referenced various stack overflow thread when looking for questions about the subtleties of C++.
+
+Any similarities between my code and these examples is because I based my code off of them. I believe that I have cited all references for the code for this
+part of the project.
+
+**/
+
+
 
 /*
 
@@ -42,6 +61,7 @@ Usage [optional]:
 #include <stdio.h>
 #include <queue>
 #include <process.h>
+#include <iostream>
 
 #include "NatNetTypes.h"
 #include "NatNetClient.h"
@@ -87,6 +107,9 @@ double distances[5][5]; //first number is table number, second is number of dest
 //int destination = KITCHEN;
 int dests[11];
 char state = '0';
+char last_cmd = 'q'; //arbitrary character so that at the beginning it does not match any possible commands.
+int num_same_cmds = 0;
+int last_dest = -1;
 
 struct command {
 	char cmd;
@@ -96,6 +119,8 @@ struct command {
 command acommand;
 struct dest_container {
 	int dests[10];
+	int active_orders[5];
+	int inactive_orders[5];
 	int step_num;
 	int num_dests;
 	CRITICAL_SECTION lock;
@@ -215,7 +240,7 @@ unsigned int _stdcall send_cmd(void *cmd) {
 }
 
 int get_order() {
-    WSADATA wsaData;
+	    WSADATA wsaData;
     int iResult;
 
     SOCKET ListenSocket = INVALID_SOCKET;
@@ -225,8 +250,16 @@ int get_order() {
     struct addrinfo hints;
 
     int iSendResult;
-    char recvbuf[32];
-    int recvbuflen = 32;
+    char recvbuf[DEFAULT_BUFLEN];
+    int recvbuflen = DEFAULT_BUFLEN;
+	int temp_active[5];
+	int temp_inactive[5];
+
+	//EnterCriticalSection(&dest_cont.lock);
+	//memcpy(temp_active, dest_cont.inactive_orders, sizeof(dest_cont.inactive_orders));
+	//memcpy(temp_active, dest_cont.active_orders, sizeof(dest_cont.active_orders));
+	//LeaveCriticalSection(&dest_cont.lock);
+	
     
     // Initialize Winsock
     iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
@@ -242,11 +275,11 @@ int get_order() {
     hints.ai_flags = AI_PASSIVE;
 
     // Resolve the server address and port
-    iResult = getaddrinfo("10.10.67.118", "4321", &hints, &result);
+    iResult = getaddrinfo("10.10.67.32", "4321", &hints, &result);
     if ( iResult != 0 ) {
         printf("getaddrinfo failed with error: %d\n", iResult);
         WSACleanup();
-        return -1;
+        return 1;
     }
 
     // Create a SOCKET for connecting to server
@@ -255,7 +288,7 @@ int get_order() {
         printf("socket failed with error: %ld\n", WSAGetLastError());
         freeaddrinfo(result);
         WSACleanup();
-        return -1;
+        return 1;
     }
 
     // Setup the TCP listening socket
@@ -265,7 +298,7 @@ int get_order() {
         freeaddrinfo(result);
         closesocket(ListenSocket);
         WSACleanup();
-        return -1;
+        return 1;
     }
 
     freeaddrinfo(result);
@@ -275,7 +308,7 @@ int get_order() {
         printf("listen failed with error: %d\n", WSAGetLastError());
         closesocket(ListenSocket);
         WSACleanup();
-        return -1;
+        return 1;
     }
 
     // Accept a client socket
@@ -284,14 +317,13 @@ int get_order() {
         printf("accept failed with error: %d\n", WSAGetLastError());
         closesocket(ListenSocket);
         WSACleanup();
-        return -1;
+        return 1;
     }
 
     // No longer need server socket
     closesocket(ListenSocket);
 
     // Receive until the peer shuts down the connection
-	int table_num = -1;
     do {
 
         iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
@@ -299,10 +331,20 @@ int get_order() {
             printf("Bytes received: %d\n", iResult);
 			printf("%s", recvbuf);
 			printf("%i", recvbuf[0] - '0');
-			table_num = recvbuf[0] -'0';
-
+			EnterCriticalSection(&dest_cont.lock);
+			
+			int new_dest = recvbuf[0] - '0';
+			if (dest_cont.dests[dest_cont.num_dests - 1] != new_dest) {
+				dest_cont.dests[dest_cont.num_dests] = (int) (recvbuf[0]-'0');
+				dest_cont.num_dests += 1;
+			}
+			//dest_cont.active_orders[new_dest -3] += 1;
+			dest_cont.inactive_orders[new_dest - 3] += 1;
+			printf("%i inactive orders", dest_cont.inactive_orders[new_dest - 3]);
+			LeaveCriticalSection(&dest_cont.lock);
+			
         // Echo the buffer back to the sender
-            //iSendResult = send( ClientSocket, recvbuf, iResult, 0 );
+            iSendResult = send( ClientSocket, recvbuf, iResult, 0 );
             //if (iSendResult == SOCKET_ERROR) {
             //    printf("send failed with error: %d\n", WSAGetLastError());
             //    closesocket(ClientSocket);
@@ -317,7 +359,7 @@ int get_order() {
             printf("recv failed with error: %d\n", WSAGetLastError());
             closesocket(ClientSocket);
             WSACleanup();
-            return -1;
+            return 1;
         }
 
     } while (iResult > 0);
@@ -328,35 +370,35 @@ int get_order() {
         printf("shutdown failed with error: %d\n", WSAGetLastError());
         closesocket(ClientSocket);
         WSACleanup();
-        return -1;
+        return 1;
     }
 
     // cleanup
     closesocket(ClientSocket);
     WSACleanup();
 
-    return table_num;
+    return 0;
 }
 
 unsigned int _stdcall update_orders(void *not_used) {
 	while (1) {
 		int next_order = get_order();
-		if (next_order < 0) {
-			printf("error getting order");
-			return 1;
-		}
-		EnterCriticalSection(&dest_cont.lock);
-		int i = 0;
-		for (; i < dest_cont.num_dests; i++ ) {
-			dest_cont.dests[i] = dest_cont.dests[dest_cont.step_num + i];
-		}
-		int a[11];
-		memcpy(a, dest_cont.dests, 11);
-		dest_cont.step_num = 0;
-		dest_cont.dests[dest_cont.num_dests] = next_order;
-		dest_cont.dests[dest_cont.num_dests+1] = -1;
-		dest_cont.num_dests += 1;
-		LeaveCriticalSection(&dest_cont.lock);
+		//if (next_order < 0) {
+		//	printf("error getting order");
+		//	return 1;
+		//}
+		//EnterCriticalSection(&dest_cont.lock);
+		//int i = 0;
+		//for (; i < dest_cont.num_dests; i++ ) {
+		//	dest_cont.dests[i] = dest_cont.dests[dest_cont.step_num + i];
+		//}
+		//int a[11];
+		//memcpy(a, dest_cont.dests, 11);
+		//dest_cont.step_num = 0;
+		//dest_cont.dests[dest_cont.num_dests] = next_order;
+		//dest_cont.dests[dest_cont.num_dests+1] = -1;
+		//dest_cont.num_dests += 1;
+		//LeaveCriticalSection(&dest_cont.lock);
 	}
 
 }
@@ -380,13 +422,22 @@ int _tmain(int argc, _TCHAR* argv[])
 	dest_cont.dests[1] = TABLE_ONE;
 	dest_cont.dests[2] = TABLE_TWO;
 	dest_cont.dests[3] = KITCHEN;
-	dest_cont.dests[4] = -1;
+	dest_cont.dests[4] = TABLE_THREE;
+	dest_cont.dests[5] = -1;
 	InitializeCriticalSection(&(dest_cont.lock));
 	//memset(dest_cont.dests, -1, 11);
 	dest_cont.step_num = 0;
-	dest_cont.num_dests = 4;
+	dest_cont.num_dests = 5;
 	acommand.packet_counter = 1;
-	//HANDLE thread = (HANDLE)::_beginthreadex(NULL, 0, update_orders,  NULL, 0, NULL);
+		for (int i = 0; i < 10; i++) {
+		//dest_cont.dests[i] = -1;
+		//cout << dest_cont.dests[i];
+	}
+	for(int j = 0; j < 5; j++) {
+		dest_cont.active_orders[j] = 0;
+		dest_cont.inactive_orders[j] = 0;
+	}
+	HANDLE thread = (HANDLE)::_beginthreadex(NULL, 0, update_orders,  NULL, 0, NULL);
     int iResult;
     int iConnectionType = ConnectionType_Multicast;
     //int iConnectionType = ConnectionType_Unicast;
@@ -399,7 +450,7 @@ int _tmain(int argc, _TCHAR* argv[])
     }
     else
     {
-        strcpy(szServerIPAddress, "10.10.67.210");		// not specified - assume server is local machine
+        strcpy(szServerIPAddress, "10.10.67.12");		// not specified - assume server is local machine
         printf("Connecting to server at LocalMachine\n");
     }
     if(argc>2)
@@ -409,7 +460,7 @@ int _tmain(int argc, _TCHAR* argv[])
     }
     else
     {
-        strcpy(szMyIPAddress, "10.10.64.173");          // not specified - assume server is local machine
+        strcpy(szMyIPAddress, "10.10.67.32");          // not specified - assume server is local machine
         printf("Connecting from LocalMachine...\n");
     }
 
@@ -755,6 +806,9 @@ void __cdecl DataHandler(sFrameOfMocapData* data, void* pUserData)
 	EnterCriticalSection(&dest_cont.lock);
 	int destination = dest_cont.dests[dest_cont.step_num];
 	int stn = dest_cont.step_num;
+
+	int nsc = num_same_cmds;
+	int num_dests = dest_cont.num_dests;
 	LeaveCriticalSection(&dest_cont.lock);
 	if (destination >0) {
 		double angle_to_dest = calculate_angle(data->RigidBodies[0], data->RigidBodies[1], data->RigidBodies[destination]);
@@ -762,16 +816,25 @@ void __cdecl DataHandler(sFrameOfMocapData* data, void* pUserData)
 		printf("==================================== %f", dist_to_dest);
 		printf("angle is %f", angle_to_dest);
 		char return_val[1];
-		if (dist_to_dest < .3) {
-			if (acommand.state != '0') {
+		if (dist_to_dest < .4) {
+			if (acommand.state != '0' || last_dest != destination) {
 				acommand.cmd = '0';
 				send_cmd(NULL);
+				last_dest = destination;
 				//HANDLE thread = (HANDLE)::_beginthreadex(NULL, 0, send_cmd,  &(acommand.cmd), 0, NULL);
 				//state = '0';
 				EnterCriticalSection(&dest_cont.lock);
 				dest_cont.step_num += 1;
-				dest_cont.num_dests -= 1;
+				//dest_cont.num_dests -= 1;
 				LeaveCriticalSection(&dest_cont.lock);
+				num_same_cmds = 0;
+			} else {
+				num_same_cmds += 1;
+				if (num_same_cmds > 20) {
+					acommand.cmd = '0';
+					send_cmd(NULL);
+					num_same_cmds = 0;
+				}
 			}
 
 			//dest_cont.step_num += 1;
@@ -781,7 +844,15 @@ void __cdecl DataHandler(sFrameOfMocapData* data, void* pUserData)
 			if (acommand.state != 'R') {
 				acommand.cmd = 'R';
 				send_cmd(NULL);
+				num_same_cmds = 0;
 				//HANDLE thread = (HANDLE)::_beginthreadex(NULL, 0, send_cmd,  &(acommand.cmd), 0, NULL);
+			} else {
+				num_same_cmds += 1;
+				if (num_same_cmds > 20) {
+					acommand.cmd = 'R';
+					send_cmd(NULL);
+					num_same_cmds = 0;
+				}
 			}
 			
 			state = 'R';
@@ -790,13 +861,22 @@ void __cdecl DataHandler(sFrameOfMocapData* data, void* pUserData)
 			if (acommand.state == 'R' || acommand.state == 'L') {
 				acommand.cmd = '0';
 				send_cmd(NULL);
+				num_same_cmds = 0;
 				//HANDLE thread = (HANDLE)::_beginthreadex(NULL, 0, send_cmd,  &(acommand.cmd), 0, NULL);
 				//state = '0';
 			} else {
 				if (acommand.state != 'D') {
 					acommand.cmd = 'D';
 					send_cmd(NULL);
+					num_same_cmds = 0;
 					//HANDLE thread = (HANDLE)::_beginthreadex(NULL, 0, send_cmd,  &(acommand.cmd), 0, NULL);
+				} else {
+					num_same_cmds += 1;
+					if (num_same_cmds > 20) {
+						acommand.cmd = 'D';
+						send_cmd(NULL);
+						num_same_cmds = 0;
+					}
 				}
 				//state = 'D';
 			}
@@ -858,6 +938,7 @@ void _WriteFooter(FILE* fp)
 	fprintf(fp, "</MarkerSet>\n");
 }
 
+	
 void resetClient()
 {
 	int iSuccess;

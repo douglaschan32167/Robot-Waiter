@@ -64,13 +64,13 @@ public class MainActivity extends Activity {
 			OutputStream outputStream = socket.getOutputStream();
 			String tableThenOrder = currentOrder;
 			if (tableThenOrder.contains("table 1") || tableThenOrder.contains("table one")) {
-				tableThenOrder = "3 " + tableThenOrder;
-			} else if (tableThenOrder.contains("table 2") || (tableThenOrder.contains("table two"))) {
 				tableThenOrder = "4 " + tableThenOrder;
-			} else if (tableThenOrder.contains("table 3") || (tableThenOrder.contains("table three"))) {
+			} else if (tableThenOrder.contains("table 2") || (tableThenOrder.contains("table two"))) {
 				tableThenOrder = "5 " + tableThenOrder;
-			} else if (tableThenOrder.contains("table 4") || (tableThenOrder.contains("table four"))) {
+			} else if (tableThenOrder.contains("table 3") || (tableThenOrder.contains("table three"))) {
 				tableThenOrder = "6 " + tableThenOrder;
+			} else if (tableThenOrder.contains("table 4") || (tableThenOrder.contains("table four"))) {
+				tableThenOrder = "7 " + tableThenOrder;
 			} else {
 				System.out.println("You must include a table number");
 				return;

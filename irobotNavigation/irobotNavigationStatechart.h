@@ -9,6 +9,7 @@
 #define IROBOTNAVIGATIONSTATECHART_H_
 
 #include "irobot/irobotSensorTypes.h"
+#include "myRio.h"
 
 /* accelerometer */
 typedef struct{
@@ -27,7 +28,10 @@ void irobotNavigationStatechart(
 	int16_t * const 			pRightWheelSpeed,					/*(out) right wheel speed */
 	int16_t * const 			pLeftWheelSpeed,					/*(out) left wheel speed */
 	int32_t * const				pState, 							/*(out) current state */
-	char *moving
+	char *moving,
+	const NiFpga_Bool dio_A0,
+	const NiFpga_Bool dio_A1,
+	const NiFpga_Bool dio_A2
 );
 
 #endif /* IROBOTNAVIGATIONSTATECHART_H_ */

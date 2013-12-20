@@ -1,23 +1,16 @@
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/socket.h>
 #include <sys/time.h>
-#include <sys/types.h>
-#include <time.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <pthread.h>
 #include "MyRio.h"
 #include "Accelerometer.h"
 #include "UART.h"
 #include "irobot/irobot.h"
 #include "irobotNavigationStatechart.h"
 #include "DIO.h"
-
+#include "AIO.h"
 
 /* Function prototypes */
 void rroll(const irobotSensorGroup6_t * const pSensors, const irobotUARTPort_t port);
@@ -29,68 +22,6 @@ void waitUntilNextMsMultiple(const uint64_t msMultiple);
 const int32_t driveDistance = 200;		/* distance to drive, in mm */
 const int32_t turnAngle = 90;			/* angle to turn, in mm */
 const int16_t WHEEL_SPEED = 200;		/* maximum speed to turn the wheels, in mm/s */
-
-typedef struct {
-	char directions;
-} direction_data;
-
-direction_data dir_data;
-
-void *Get_Directions() {
-        printf("start thread func");
-    int listenfd = 0, connfd = 0;
-    struct sockaddr_in serv_addr;
-
-    char cmd = '0';
-    time_t ticks;
-        printf("start");
-
-    listenfd = socket(AF_INET, SOCK_STREAM, 0);
-    memset(&serv_addr, '0', sizeof(serv_addr));
-    //memset(sendBuff, '0', sizeof(sendBuff));
-
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(5000);
-
-    bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
-
-    listen(listenfd, 10);
-
-    while(1)
-    {
-        connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
-
-        //ticks = time(NULL);
-        //snprintf(sendBuff, sizeof(sendBuff), "%.24s\r\n", ctime(&ticks));
-        //write(connfd, sendBuff, strlen(sendBuff));
-                if (read(connfd, &cmd, 1) < 0) {
-                        printf("error in read");
-                } else  {
-                        printf("got something");
-                        printf("%c", cmd);
-                        if (cmd == 'S') {
-                                dir_data.directions = '0';
-                        } else {
-                                dir_data.directions = cmd;
-                        }
-                }
-        close(connfd);
-        sleep(1);
-     }
-        //char* testdirs = "NEESSWWNNWNS0";
-        //dir_data.directions = 'R';//changes pointer
-        //sleep(5);
-        //dir_data.directions = '0';
-        //sleep(4);
-        //dir_data.directions = 'L';//changes pointer
-        //sleep(5);
-        //dir_data.directions = '0';
-        pthread_exit(NULL);
-}
-void printtest(char a) {
-	printf("%c", a);
-}
 
 int main(int argc, char **argv)
 {
@@ -139,11 +70,16 @@ int main(int argc, char **argv)
     A2.in = DIOA_70IN;
     A2.out = DIOA_70OUT;
     A2.bit = 2;
+
     status = MyRio_Open();
-    if (MyRio_IsNotSuccess(status)){
-    	MyRio_PrintStatus(status);
-        return status;
-    }
+	if (MyRio_IsNotSuccess(status)){
+		MyRio_PrintStatus(status);
+		return status;
+	}
+
+
+    //dio_A0 = Dio_ReadBit(&A0);
+    //dio_A7 = Dio_ReadBit(&A7);
 
 	/*
 	 * Specify the registers that correspond to the accelerometer channel
@@ -157,17 +93,7 @@ int main(int argc, char **argv)
 
 	/* initialize iRobot */
 	NiFpga_IfIsNotError(status, irobotOpen(port));
-	dir_data.directions = calloc(0, 20);
 
-	//Get_Directions(NULL);
-  	pthread_t ptt;
-    int thread_start = pthread_create(&ptt, NULL, Get_Directions, NULL);
-    if (thread_start != 0) {
-    	printf("error creating thread");
-    	exit(-1);
-    }
-
-	MyRio_PrintStatus(status);
 	/* Read inputs, execute statechart, generate outputs, print debug information */
 	while(!NiFpga_IsError(status) && !sensors.buttons.advance){
 		/* Read iRobot sensors */
@@ -188,7 +114,6 @@ int main(int argc, char **argv)
 	    dio_A0 = Dio_ReadBit(&A0);
 	    dio_A1 = Dio_ReadBit(&A1);
 	    dio_A2 = Dio_ReadBit(&A2);
-		printf("%c", dir_data.directions);
 		/* Execute statechart */
 		irobotNavigationStatechart(
 			WHEEL_SPEED,
@@ -200,7 +125,6 @@ int main(int argc, char **argv)
 			&leftWheelSpeed,
 			&rightWheelSpeed,
 			&state,
-			dir_data.directions,
 			dio_A0,
 			dio_A1,
 			dio_A2
@@ -210,22 +134,22 @@ int main(int argc, char **argv)
 		NiFpga_IfIsNotError(status, irobotDriveDirect(port, leftWheelSpeed, rightWheelSpeed));
 
 		/* print debug information */
-		printf("\n\nx=%+.2f y=%+.2f z=%+.2f\nLWheel=%+3d RWheel=%+3d State=%+2d\n",
+		printf("\n\nx=%+.2f y=%+.2f z=%+.2f\nLWheel=%+3d RWheel=%+3d State=%+2d\n A2=%d\n A1=%d A0=%d",
 				accelValue.x,
 				accelValue.y,
 				accelValue.z,
 				leftWheelSpeed,
 				rightWheelSpeed,
-				state);
-
+				state,
+				dio_A2,
+				dio_A1,
+				dio_A0);
+		//printf("%d\n",dio_A7);
 		/* try uncommenting this line */
-		 //rroll(&sensors, port);
+		/* rroll(&sensors, port); */
 
 		/* Loop timing */
 		waitUntilNextMsMultiple(60);
-
-		printf("end of loop");
-		MyRio_PrintStatus(status);
 	}
 
 	/* even if an error has occurred, close the UART port */

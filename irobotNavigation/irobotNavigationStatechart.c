@@ -8,6 +8,7 @@
 #include "irobotNavigationStatechart.h"
 #include <math.h>
 #include <stdlib.h>
+#include "myRIO.h"
 
 /* Program States */
 typedef enum{
@@ -18,7 +19,7 @@ typedef enum{
         DRIVE, /* Drive straight */
         TURN, /* Turn */
         STOP,
-        FORWARD,
+        FWD_NOT_USED,
         BACKWARD,
         RIGHT,
         LEFT,
@@ -26,7 +27,11 @@ typedef enum{
         TURN_RIGHT,
         TURN_LEFT,
         WAIT_FOR_DIRECTIONS,
-        DRIVE_LIMITLESS
+        DRIVE_LIMITLESS,
+        AVOID_TURN_RIGHT,
+        AVOID_TURN_LEFT,
+        WAIT,
+        FORWARD
 } robotState_t;
 
 #define DEG_PER_RAD (180.0 / M_PI) /* degrees per radian */
@@ -45,13 +50,18 @@ void irobotNavigationStatechart( //parameters
                 int16_t * const pRightWheelSpeed, /*(out) right wheel speed */
                 int16_t * const pLeftWheelSpeed, /*(out) left wheel speed */
                 int32_t * const pState, /*(out) current state */
-                char *moving
+                char *moving,
+            	const NiFpga_Bool dio_A0,
+            	const NiFpga_Bool dio_A1,
+            	const NiFpga_Bool dio_A2
 ){ //body of function
         /* local state */
         static robotState_t state = INITIAL; /* current program state */
         static robotState_t unpausedState = MOVEMENT; /* state history for pause region */
         static int32_t distanceAtManeuverStart = 0; /* distance robot had travelled when a maneuver begins, in mm */
-        static int32_t angleAtManeuverStart = 0; /* angle through which the robot had turned when a maneuver begins, in deg */
+    	static int32_t				angleAtManeuverStart = 0;		/* angle through which the robot had turned when a maneuver begins, in deg */
+        static int32_t 				distanceForward = 0;
+        static robotState_t         previous = INITIAL;
 
         static int32_t angleObjective = 0;
         //static char direction = 1; //1 = straight, 2 = backwards, 3 = left, 4 = right
@@ -126,8 +136,59 @@ void irobotNavigationStatechart( //parameters
                         distanceAtManeuverStart = netDistance;
                         state = MOVEMENT;
                 }
+        } else if(state == AVOID_TURN_RIGHT){
+            if (abs(netAngle - angleAtManeuverStart) >= 90){
+    			angleAtManeuverStart = netAngle;
+    			previous = AVOID_TURN_RIGHT;
+                state = FORWARD;
+            }else if (abs(netAngle - angleAtManeuverStart) >= 90){
+    			angleAtManeuverStart = netAngle;
+                state = STOP;
+            }
+            printf("\n AVOID_TURN_RIGHT");
+            distanceAtManeuverStart = netDistance;
         }
-        else if(state == FORWARD){
+        else if(state == AVOID_TURN_LEFT){
+            if (abs(netAngle - angleAtManeuverStart) >= 90){
+    			angleAtManeuverStart = netAngle;
+    			previous = AVOID_TURN_LEFT;
+                state = FORWARD;
+            }else if (abs(netAngle - angleAtManeuverStart) >= 90){
+    			angleAtManeuverStart = netAngle;
+                state = STOP;
+            }
+            printf("\n AVOID_TURN_LEFT");
+            distanceAtManeuverStart = netDistance;
+        }
+        else if(state == FORWARD
+        		&& ((!dio_A1 && previous == AVOID_TURN_LEFT) || (!dio_A2 && previous == AVOID_TURN_RIGHT))
+        		&& distanceForward >= 250){
+        	printf("\n forward");
+            distanceForward = 0;
+            state = STOP;
+        }
+        else if(state == FORWARD && !dio_A1 && previous == AVOID_TURN_LEFT){
+        	printf("\n forward");
+            distanceForward = netDistance - distanceAtManeuverStart;
+        }
+        else if(state == FORWARD && !dio_A2 && previous == AVOID_TURN_RIGHT){
+        	printf("\n forward");
+            distanceForward = netDistance - distanceAtManeuverStart;
+        }else if(state == WAIT){
+        	printf("\n wait");
+        	if (!dio_A0){
+                state = STOP;
+        	}else if (!dio_A1){
+    			state = AVOID_TURN_RIGHT;
+    			angleAtManeuverStart = netAngle;
+    		}else if (!dio_A2){
+    			state = AVOID_TURN_LEFT;
+    			angleAtManeuverStart = netAngle;
+    		}
+        }else if(state == FORWARD){
+        	printf("\n forward");
+        }
+        else if(state == FWD_NOT_USED){
                 if(direction == 'N'){
                         distanceAtManeuverStart = netDistance;
                         state = DRIVE;
@@ -246,7 +307,7 @@ void irobotNavigationStatechart( //parameters
                 ///printf("%s",direction);
 
                 if(dir_to_go == 'N'){
-                        state = FORWARD;
+                        state = FWD_NOT_USED;
                 }
                 else if(dir_to_go == 'S'){
                         state = BACKWARD;
@@ -288,7 +349,25 @@ void irobotNavigationStatechart( //parameters
         		state = DRIVE_LIMITLESS;
         	}
         } else if (state == DRIVE_LIMITLESS) {
-        	if (dir_to_go == '0') {
+        	if (dio_A0) {
+        		if (dio_A1 && !dio_A2){
+        			printf("\n LEFT TURN");
+        			state = AVOID_TURN_LEFT;
+        			angleAtManeuverStart = netAngle;
+        		}else if (dio_A2  && !dio_A1){
+        		    printf("\n RIGHT TURN");
+        			state = AVOID_TURN_RIGHT;
+        			angleAtManeuverStart = netAngle;
+        		}else if (dio_A1 && dio_A2){
+        		    printf("\n WAIT");
+        			state = WAIT;
+        		}else{
+        		    printf("\n elseLEFT TURN");
+        			state = AVOID_TURN_LEFT;
+        			angleAtManeuverStart = netAngle;
+        		}
+
+        	} else if (dir_to_go == '0') {
         		state = STOP;
         	} else if (dir_to_go == 'R') {
         		state = TURN_RIGHT;
@@ -314,7 +393,7 @@ void irobotNavigationStatechart( //parameters
                 /* full speed ahead! */
                 leftWheelSpeed = rightWheelSpeed = maxWheelSpeed;
                 break;
-        case FORWARD:
+        case FWD_NOT_USED:
                 if(direction == 'E'){
                         leftWheelSpeed = maxWheelSpeed/2;
                         rightWheelSpeed = -maxWheelSpeed/2;
@@ -374,12 +453,12 @@ void irobotNavigationStatechart( //parameters
                 }
                 break;
         case TURN_RIGHT:
-            	leftWheelSpeed = -maxWheelSpeed/4;
-            	rightWheelSpeed = maxWheelSpeed/4;
+            	leftWheelSpeed = -maxWheelSpeed/5;
+            	rightWheelSpeed = maxWheelSpeed/5;
             	break;
         case TURN_LEFT:
-        		leftWheelSpeed = maxWheelSpeed/4;
-        		rightWheelSpeed = -maxWheelSpeed/4;
+        		leftWheelSpeed = maxWheelSpeed/5;
+        		rightWheelSpeed = -maxWheelSpeed/5;
         		break;
         case MOVEMENT:
                 leftWheelSpeed = 0;
@@ -393,6 +472,22 @@ void irobotNavigationStatechart( //parameters
         	leftWheelSpeed = maxWheelSpeed;
         	rightWheelSpeed = maxWheelSpeed;
         	break;
+        case AVOID_TURN_LEFT:
+            leftWheelSpeed = -maxWheelSpeed;
+            rightWheelSpeed = maxWheelSpeed;
+            break;
+
+        case AVOID_TURN_RIGHT:
+            leftWheelSpeed = maxWheelSpeed;
+            rightWheelSpeed = -maxWheelSpeed;
+            break;
+    	case WAIT:
+    		/* in pause mode, robot should be stopped */
+    		leftWheelSpeed = rightWheelSpeed = 0;
+    		break;
+    	case FORWARD:
+    		leftWheelSpeed = rightWheelSpeed = maxWheelSpeed;
+    		break;
         default:
                 /* Unknown state */
                 leftWheelSpeed = rightWheelSpeed = 0;
